@@ -5,6 +5,7 @@ var querystring = require('querystring');
 var fs = require('fs');
 var zlib = require('zlib');
 var configPath = "./waver.js";
+var config = require('./waver.js').data;
 var unicode = require('./Unicode');
 //05krgeu6p6t7cjl7aheq6emtr4
 var opts = {
@@ -18,6 +19,12 @@ var opts = {
             "Content-Type":"application/x-www-form-urlencoded" 
         }
     };
+var dataWindow = [];
+var windowWidth = 100;
+var EventEmitter = require('events').EventEmitter;
+var eve = new EventEmitter();
+var sta_Max = config.max?config.max:0, sta_Min = config.min?config.min:0;
+
 Util.getData = function(startV, path, data, callback){
     var data_getData = querystring.stringify(data);
     var opts_getData = opts;
@@ -90,7 +97,9 @@ Util.test = function(tid, cb){
                 resData.sort(function(a,b){return parseInt(a.tid) - parseInt(b.tid);});
                 for (var i = 0; i < resData.length; i++) {
                     if(resData[i].tid > startV){
-                        console.log(resData[i].tid+":"+resData[i].price);
+                        //console.log(resData[i].tid+":"+resData[i].price);
+                        //console.log(JSON.stringify(resData[i]));
+                        Util.dealWithData(resData[i]);
                     }
                 };
                 //console.log(resData[0].tid+'~'+resData[resData.length-1].tid);
@@ -107,3 +116,38 @@ Util.test = function(tid, cb){
         cb(err, startV);
     }
 }
+
+Util.dealWithData = function(data){
+    if (dataWindow.length < windowWidth) {
+        dataWindow.push(data);
+    }else if (dataWindow.length == windowWidth) {
+        dataWindow.shift();
+        dataWindow.push(data);
+
+        Util.analysis(dataWindow);
+    };
+}
+
+Util.analysis = function(list){
+    var tmp = 0;
+    for (var i = list.length - 1; i > 0; i--) {
+        tmp += list[i].price - list[i-1].price;
+    };
+    //console.log(tmp);
+    eve.emit('test', tmp);
+    //emit sig from tmp
+}
+
+eve.on('test',function(d){
+    if (d>sta_Max) {
+        sta_Max = d;
+        console.log('Max:'+sta_Max);
+        Util.modifyConfig(null, 'max', sta_Max);
+    };
+    if (d<sta_Min) {
+        sta_Min = d;
+        console.log('Min:'+sta_Min);
+        Util.modifyConfig(null, 'min', sta_Min);
+    };
+    console.log(d);
+});
