@@ -20,10 +20,9 @@ var opts = {
         }
     };
 var dataWindow = [];
-var windowWidth = 100;
 var EventEmitter = require('events').EventEmitter;
 var eve = new EventEmitter();
-var sta_Max = config.max?config.max:0, sta_Min = config.min?config.min:0;
+
 
 Util.getData = function(startV, path, data, callback){
     var data_getData = querystring.stringify(data);
@@ -118,9 +117,9 @@ Util.test = function(tid, cb){
 }
 
 Util.dealWithData = function(data){
-    if (dataWindow.length < windowWidth) {
+    if (dataWindow.length < config.wid) {
         dataWindow.push(data);
-    }else if (dataWindow.length == windowWidth) {
+    }else if (dataWindow.length == config.wid) {
         dataWindow.shift();
         dataWindow.push(data);
 
@@ -133,21 +132,27 @@ Util.analysis = function(list){
     for (var i = list.length - 1; i > 0; i--) {
         tmp += list[i].price - list[i-1].price;
     };
-    //console.log(tmp);
     eve.emit('test', tmp);
-    //emit sig from tmp
 }
 
 eve.on('test',function(d){
-    if (d>sta_Max) {
-        sta_Max = d;
-        console.log('Max:'+sta_Max);
-        Util.modifyConfig(null, 'max', sta_Max);
+    if (d>config.max) {
+        config.max = d;
+        console.log('Max:'+config.max);
+        Util.modifyConfig(null, 'max', config.max);
     };
-    if (d<sta_Min) {
-        sta_Min = d;
-        console.log('Min:'+sta_Min);
-        Util.modifyConfig(null, 'min', sta_Min);
+    if (d<config.min) {
+        config.min = d;
+        console.log('Min:'+config.min);
+        Util.modifyConfig(null, 'min', config.min);
     };
+    if (d>0) {
+        Util.modifyConfig(null,'ava1',(config.ava1*config.count1 + d)/(++config.count1));
+        Util.modifyConfig(null,'count1',config.count1);
+    }else if(d<0){
+        Util.modifyConfig(null,'ava2',(config.ava2*config.count2 + d)/(++config.count2));
+        Util.modifyConfig(null,'count2',config.count2);
+    }
+
     console.log(d);
 });
